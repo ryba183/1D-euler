@@ -1,14 +1,11 @@
 #include <iostream>
-#include <cmath>
 #include <complex>
 #include <array>
 #include <vector>
-#include <functional>
 #include <algorithm>
 #include <iomanip>
 #include <getopt.h>
 #include <fstream>
-#include <map>
 
 unsigned int ncells = 1000;
 double maxtime = 0.15;
