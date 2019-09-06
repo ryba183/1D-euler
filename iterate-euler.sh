@@ -18,4 +18,4 @@ export -f iterate
 binrange=( $(seq 1001 1000 10000) $(seq 10001 10000 100000) $(seq 100001 300000 1000001))
 
 # Set -j to increase thread count for parrallel execution
-parallel -j 6 iterate ::: "${binrange[@]}"
+parallel -j 1 iterate ::: "${binrange[@]}"

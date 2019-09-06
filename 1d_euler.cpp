@@ -17,8 +17,7 @@ double pressureL = 0.4;
 double pressureR = 0.4;
 std::string outPath = "-";
 
-void PrintHelp()
-{
+void PrintHelp() {
     std::cout <<
         "Parameter settings:\n"
         "   -n, --steps           Set number of steps across domain\n"
@@ -35,8 +34,7 @@ void PrintHelp()
 }
 
 // https://gist.github.com/ashwin/d88184923c7161d368a9
-void ProcessArgs(int argc, char** argv)
-{
+void ProcessArgs(int argc, char** argv) {
     const char* const short_opts = "n:t:d:D:v:V:p:P:o:h";
     const option long_opts[] = {
         {"steps", required_argument, nullptr, 'n'},
@@ -52,8 +50,7 @@ void ProcessArgs(int argc, char** argv)
         {nullptr, no_argument, nullptr, 0}
     };
 
-    while (true)
-    {
+    while (true) {
         const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
 
         if (-1 == opt)
@@ -97,10 +94,10 @@ void ProcessArgs(int argc, char** argv)
     }
 }
 
-double get_energy(  double pressure, double density, 
+double get_energy(  double pressure, double density, double momentum,
                     double velocity, double gamma = 1.4) {
     double internal_energy = pressure/((gamma - 1)*density);
-    return (density * internal_energy) + (0.5*density*velocity*velocity);
+    return (density * internal_energy) + (0.5*momentum*velocity);
 }
 
 double get_velocity(double density, double momentum) {
@@ -123,7 +120,7 @@ double get_dx(
 
 double speed_of_sound(std::array<double, 6>& q, double gamma = 1.4) {
     double c_squared = (gamma*q[3])/q[0];             
-    return std::abs(sqrt(c_squared));
+    return sqrt(c_squared);
 }
 
 double get_amax(std::vector<std::array<double, 6>>& q) {
@@ -274,10 +271,13 @@ std::vector<std::array<double, 6>> initialiseData(unsigned int ncells,
     
     // Declare initial data
     std::vector<std::array<double, 6>> q(ncells);
-    // std::vector<std::array<double, 3>>
+
     double energy, density, velocity, pressure, momentum;
+    // In odd number of cells, the middle cell is assigned to right domain
+    unsigned int midpoint = ncells/2;
+
     for (unsigned int i = 0; i < ncells; i++) {
-        if (i < (ncells/2)) {
+        if (i <= midpoint) {
             density = densityL;
             velocity = velocityL;
             pressure = pressureL;
@@ -287,8 +287,8 @@ std::vector<std::array<double, 6>> initialiseData(unsigned int ncells,
             velocity = velocityR;
             pressure = pressureR;
         }
-        energy = get_energy(pressure, density, velocity);
         momentum = density * velocity;
+        energy = get_energy(pressure, density, momentum, velocity);
         q[i][0] = density;
         q[i][1] = momentum;
         q[i][2] = energy;
