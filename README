@@ -1,0 +1,27 @@
+### 1D_euler solver ###
+
+# Parameters are submitted via command line options.
+# For parameter options type:
+./1d_euler --help 
+
+### To recombile source file ###
+
+# Compile 1d_euler solver with optimisation level 3
+make 1d_euler
+
+# Combile 1d_euler with profilling enabled
+make 1d_euler_pg
+
+### iterate-euler.sh Bash script runs test case 2 with multiple ncells ###
+
+# iterate-euler.sh runs test case 2 with a range of ncells to see how
+# quickly the midpoint solution velocity approaches zero.
+# The script also times each iteraction and output is written to stdout.
+# Maybe this could be a good graph to include?
+# An output of this can be found in the velocity test2 folder.  
+
+# This runs using GNU parallel to run multiple copies at the same time.
+# You may need to install GNG parallel and you can adjust the number 
+# of copies run in parallel by editing the -j parameter in the .sh file. 
+chmod u+x iterate-euler.sh
+./iterate-euler.sh
