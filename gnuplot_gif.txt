@@ -1,0 +1,8 @@
+
+./a.out --steps 100 --time 2 -d 1 -v 0 -p 1 -D 0.125 -V 0 -P 0.1 > test1.dat
+set terminal gif animate delay 1
+set output 'test1_pressure.gif'
+stats 'test1.dat' nooutput
+set xrange [0:1]
+set yrange [-1:1]
+do for[i=0:int(STATS_blocks)-2]{plot 'test1.dat' u 1:3 index i w l}

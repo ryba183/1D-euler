@@ -15,27 +15,29 @@ double velocityL = -2;
 double velocityR = 2;
 double pressureL = 0.4;
 double pressureR = 0.4;
+std::string boundary = "transmissive";
 std::string outPath = "-";
 
 void PrintHelp() {
     std::cout <<
         "Parameter settings:\n"
-        "   -n, --steps           Set number of steps across domain\n"
-        "   -t, --time            Set time to simulate until\n"
-        "   -d, --density_left    Set density on left side of domain\n"
-        "   -D, --density_right   Set density on right side of domain\n"
-        "   -v, --velocity_left   Set velocity on left side of domain\n"
-        "   -V, --velocity_right  Set velocity on right side of domain\n"
-        "   -p, --pressure_left   Set pressure on left side of domain\n"
-        "   -P, --pressure_right  Set pressure on right side of domain\n"
-        "   -o, --outfile         File to write solution\n"
-        "   -h, --help            Show help\n";
+        "   -n, --steps                             Division across across domain\n"
+        "   -t, --time                              Time to simulate until\n"
+        "   -d, --density_left                      Density on left side of domain\n"
+        "   -D, --density_right                     Density on right side of domain\n"
+        "   -v, --velocity_left                     Velocity on left side of domain\n"
+        "   -V, --velocity_right                    Velocity on right side of domain\n"
+        "   -p, --pressure_left                     Pressure on left side of domain\n"
+        "   -P, --pressure_right                    Pressure on right side of domain\n"
+        "   -b, --boundary (default: transmissive)  Boundary condition (transmissive, periodic or reflective.)\n"
+        "   -o, --outfile                           File to write solution\n"
+        "   -h, --help                              Show help\n";
     exit(1);
 }
 
 // https://gist.github.com/ashwin/d88184923c7161d368a9
 void ProcessArgs(int argc, char** argv) {
-    const char* const short_opts = "n:t:d:D:v:V:p:P:o:h";
+    const char* const short_opts = "n:t:d:D:v:V:p:P:b:o:h";
     const option long_opts[] = {
         {"steps", required_argument, nullptr, 'n'},
         {"time", required_argument, nullptr, 't'},
@@ -45,6 +47,7 @@ void ProcessArgs(int argc, char** argv) {
         {"velocity_right", required_argument, nullptr, 'V'},
         {"pressure_left", required_argument, nullptr, 'p'},
         {"pressure_right", required_argument, nullptr, 'P'},
+        {"boundary", required_argument, nullptr, 'b'},
         {"outfile", required_argument, nullptr, 'o'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, no_argument, nullptr, 0}
@@ -81,6 +84,9 @@ void ProcessArgs(int argc, char** argv) {
             break;
         case 'P':
             pressureR = std::stof(optarg);
+            break;
+        case 'b':
+            boundary = std::string(optarg);
             break;
         case 'o':
             outPath = std::string(optarg);
@@ -244,7 +250,8 @@ std::array<double, 6> get_q_n1(std::array<double, 6>& qi,
 }
 
 std::array<std::array<double, 6>, 2> get_q_isurround(
-    std::vector<std::array<double, 6>>& q, int i) {
+    std::vector<std::array<double, 6>>& q, int i,
+    std::string boundary = "transmissive") {
     // Returns q[i-1] and q[i+1] accounting for boundary conditions
     
     // Declare output map
@@ -252,12 +259,29 @@ std::array<std::array<double, 6>, 2> get_q_isurround(
 
     int size = q.size();
     if (i == 0) {
-        q_isurround[0] = q[i];
+        if (boundary == "periodic") {
+            q_isurround[0] = q[size - 1];
+        } else if (boundary == "reflective") {
+            q_isurround[0] = q[i];
+            q_isurround[0][1] = -1*q[i][1];
+            q_isurround[0][4] = -1*q[i][4];
+        } else {
+            q_isurround[0] = q[i];
+        }
+            
     } else {
         q_isurround[0] = q[i-1];   
     }
     if (i == size - 1) {
-        q_isurround[1] = q[size - 1];
+        if (boundary == "periodic") {
+            q_isurround[1] = q[0];
+        } else if (boundary == "reflective") {
+            q_isurround[1] = q[size - 1];
+            q_isurround[1][1] = -1*q[size - 1][1];
+            q_isurround[1][4] = -1*q[size - 1][4];
+        } else {
+            q_isurround[1] = q[size - 1];
+        }
     } else {
         q_isurround[1] = q[i+1];   
     }
@@ -319,9 +343,17 @@ int main(int argc, char* argv[]) {
     
     // Compute delta x across domain space
     double dx = get_dx(ncells);
-    
+    double pos;
     double t = 0;
+    
+    for (unsigned int i = 0; i < q.size(); i++) {
+        out << pos << "\t" << q[i][0] << "\t" << q[i][4] << "\t" << q[i][3] << "\t" << q[i][5] << std::endl;
+    }
+    out << std::endl << std::endl;
+    
     while (t < maxtime) {
+        
+        pos = 0;
         
         // Declare vector for storing q(n+1) for all i
         std::vector<std::array<double, 6>> q_next(ncells);
@@ -332,20 +364,17 @@ int main(int argc, char* argv[]) {
         
         for (unsigned int i = 0; i < q.size(); i++) {
             // Return q(n, i+1) and q(n, i-1)
-            std::array<std::array<double, 6>, 2> q_surround = get_q_isurround(q, i);
+            std::array<std::array<double, 6>, 2> q_surround = get_q_isurround(q, i, boundary);
             // Compute q(i, n+1)
             q_next[i] = get_q_n1(q[i], q_surround[1], q_surround[0], dx, dt);
-        }
+            out << pos << "\t" << q[i][0] << "\t" << q[i][4] << "\t" << q[i][3] << "\t" << q[i][5] << std::endl;
+            pos += dx;
+        }        
+        out << std::endl << std::endl;
         t += dt;
         q = q_next;
     }
     
-    int size = q.size();
-    for (int i = 0; i < size; i++) {
-        out << q[i][0] << "\t" 
-            << q[i][4] << "\t" 
-            << q[i][3] << "\t" 
-            << q[i][5] << std::endl;
-    }
+    
     return 0;
 }
