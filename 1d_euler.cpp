@@ -7,7 +7,7 @@
 #include <getopt.h>
 #include <fstream>
 
-unsigned int ncells = 1000;
+unsigned int ncells = 100;
 double maxtime = 0.15;
 double densityL = 1;
 double densityR = 1;
@@ -17,27 +17,38 @@ double pressureL = 0.4;
 double pressureR = 0.4;
 std::string boundary = "transmissive";
 std::string outPath = "-";
+bool final_only = false;
 
 void PrintHelp() {
     std::cout <<
-        "Parameter settings:\n"
-        "   -n, --steps                             Division across across domain\n"
-        "   -t, --time                              Time to simulate until\n"
-        "   -d, --density_left                      Density on left side of domain\n"
-        "   -D, --density_right                     Density on right side of domain\n"
-        "   -v, --velocity_left                     Velocity on left side of domain\n"
-        "   -V, --velocity_right                    Velocity on right side of domain\n"
-        "   -p, --pressure_left                     Pressure on left side of domain\n"
-        "   -P, --pressure_right                    Pressure on right side of domain\n"
-        "   -b, --boundary (default: transmissive)  Boundary condition (transmissive, periodic or reflective.)\n"
-        "   -o, --outfile                           File to write solution\n"
-        "   -h, --help                              Show help\n";
+        "FORCE solver for 1D Euler equations\n"
+        "Version 1.0\n\n"
+        
+        "usage: 1d_euler [-h] [-n [STEPS]] [-t [TIME]] [-b [BOUNDARY]] [-o [OUTFILE]] [-f [FINAL_ONLY]]\n"
+        "                [-d [DENSITY_LEFT]] [-D [DENSITY_RIGHT]] [-v [VELOCITY_LEFT]] \n"
+        "                [-V [VELOCITY_RIGHT]] [-p [PRESSURE_LEFT]] [-P [PRESSURE_RIGHT]]\n\n"
+        
+        "optional arguments::\n"
+        "   -n, --steps             (default: 100)          Division across across domain\n"
+        "   -t, --time              (default: 0.15)         Time to simulate until\n"
+        "   -d, --density_left      (default: 1)            Density on left side of domain\n"
+        "   -D, --density_right     (default: 1)            Density on right side of domain\n"
+        "   -v, --velocity_left     (default: -2)           Velocity on left side of domain\n"
+        "   -V, --velocity_right    (default: 2)            Velocity on right side of domain\n"
+        "   -p, --pressure_left     (default: 0.4)          Pressure on left side of domain\n"
+        "   -P, --pressure_right    (default: 0.4)          Pressure on right side of domain\n"
+        "   -b, --boundary          (default: transmissive) Boundary condition (transmissive, periodic or reflective)\n"
+        "   -o, --outfile           (default: stdout)       File to write solution\n"
+        "   -f  --final_only        (default: true)         Only output state at end time\n"
+        "   -h, --help                                      Show this help message\n\n"
+        
+        "Stephen Richer, University of Bath, Bath, UK (sr467@bath.ac.uk)\n";
     exit(1);
 }
 
 // https://gist.github.com/ashwin/d88184923c7161d368a9
 void ProcessArgs(int argc, char** argv) {
-    const char* const short_opts = "n:t:d:D:v:V:p:P:b:o:h";
+    const char* const short_opts = "n:t:d:D:v:V:p:P:b:o:fh";
     const option long_opts[] = {
         {"steps", required_argument, nullptr, 'n'},
         {"time", required_argument, nullptr, 't'},
@@ -49,6 +60,7 @@ void ProcessArgs(int argc, char** argv) {
         {"pressure_right", required_argument, nullptr, 'P'},
         {"boundary", required_argument, nullptr, 'b'},
         {"outfile", required_argument, nullptr, 'o'},
+        {"final_only", no_argument, nullptr, 'o'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, no_argument, nullptr, 0}
     };
@@ -90,6 +102,9 @@ void ProcessArgs(int argc, char** argv) {
             break;
         case 'o':
             outPath = std::string(optarg);
+            break;
+        case 'f':
+            final_only = true;
             break;
         case 'h': // -h or --help
         case '?': // Unrecognized option
@@ -343,17 +358,10 @@ int main(int argc, char* argv[]) {
     
     // Compute delta x across domain space
     double dx = get_dx(ncells);
-    double pos;
+    double pos = 0;
     double t = 0;
     
-    for (unsigned int i = 0; i < q.size(); i++) {
-        out << pos << "\t" << q[i][0] << "\t" << q[i][4] << "\t" << q[i][3] << "\t" << q[i][5] << std::endl;
-    }
-    out << std::endl << std::endl;
-    
     while (t < maxtime) {
-        
-        pos = 0;
         
         // Declare vector for storing q(n+1) for all i
         std::vector<std::array<double, 6>> q_next(ncells);
@@ -367,12 +375,23 @@ int main(int argc, char* argv[]) {
             std::array<std::array<double, 6>, 2> q_surround = get_q_isurround(q, i, boundary);
             // Compute q(i, n+1)
             q_next[i] = get_q_n1(q[i], q_surround[1], q_surround[0], dx, dt);
-            out << pos << "\t" << q[i][0] << "\t" << q[i][4] << "\t" << q[i][3] << "\t" << q[i][5] << std::endl;
-            pos += dx;
         }        
-        out << std::endl << std::endl;
+        
+        if (!final_only) {
+            for (unsigned int i = 0; i < q.size(); i++) {
+                pos += dx;
+                out << pos << "\t" << q[i][0] << "\t" << q[i][4] << "\t" << q[i][3] << "\t" << q[i][5] << std::endl;
+            }
+            out << std::endl << std::endl;
+        }
         t += dt;
         q = q_next;
+        pos = 0;
+    }
+    
+    for (unsigned int i = 0; i < q.size(); i++) {
+        pos += dx;
+        out << pos << "\t" << q[i][0] << "\t" << q[i][4] << "\t" << q[i][3] << "\t" << q[i][5] << std::endl;
     }
     
     
