@@ -25,7 +25,7 @@ gnuplot << EOF
   set terminal png
   set output '${png}'
   set logscale xy 10
-  set lmargin at screen 0.25
+  set format xy "%e
   unset key
   set multiplot layout 2,1
     set xlabel 'cells'
