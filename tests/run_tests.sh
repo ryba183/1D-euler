@@ -24,15 +24,19 @@ for boundary in transmissive periodic reflective; do
   unset key
   do for [i=0:int(STATS_blocks)-2] {
     set multiplot layout 2,2
+      set lmargin at screen 0.15
       set yrange [0:25]
       set ylabel 'density'
       plot '${dat}' u 1:2 index i w l
+      set lmargin at screen 0.5+0.15
       set yrange [-20:25]
       set ylabel 'velocity'
       plot '${dat}' u 1:3 index i w l
+      set lmargin at screen 0.15
       set yrange [0:2000]
       set ylabel 'pressure'
       plot '${dat}' u 1:4 index i w l
+      set lmargin at screen 0.5+0.15
       set yrange [0:400]
       set ylabel 'internal energy'
       plot '${dat}' u 1:5 index i w l

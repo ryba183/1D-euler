@@ -25,10 +25,9 @@ gnuplot << EOF
   set terminal png
   set output '${png}'
   set logscale xy 10
-  set format xy "%e
+  set format xy "%1.0e
   unset key
   set multiplot layout 2,1
-    set xlabel 'cells'
     set ylabel 'velocity'
     plot '${dat}' u 1:(abs(\$2)) w l
     set ylabel 'time / seconds'
